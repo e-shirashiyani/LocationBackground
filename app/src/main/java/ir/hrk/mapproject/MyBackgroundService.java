@@ -53,9 +53,13 @@ public class MyBackgroundService extends Service {
     private final IBinder mBinder = new LocalBinder();
 
 
+
+
     public MyBackgroundService() {
 
     }
+
+
 
 
     @Override
@@ -131,6 +135,8 @@ public class MyBackgroundService extends Service {
         mServiceHandler.removeCallbacks(null);
         super.onDestroy();
     }
+
+
 
 
     public void requestLocationUpdate(){
@@ -221,6 +227,10 @@ public class MyBackgroundService extends Service {
                     return true;
         return false;
     }
+
+
+
+
 
     public class LocalBinder extends Binder {
         MyBackgroundService getSrvice() {
