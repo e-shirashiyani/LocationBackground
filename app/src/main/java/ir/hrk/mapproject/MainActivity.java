@@ -57,8 +57,8 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     Button requestLocation, removeLocation;
     MyBackgroundService mService = null;
     boolean mBound = false;
-    Context context=this;
-    Activity activity=this;
+    Context context = this;
+    Activity activity = this;
 
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
         @Override
@@ -86,10 +86,10 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
         removeLocation = findViewById(R.id.remove_location_updates_button);
         requestLocation = findViewById(R.id.request_location_updates_button);
 
-        if(ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_BACKGROUND_LOCATION)!=PackageManager.PERMISSION_GRANTED &&
-                ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION)!=PackageManager.PERMISSION_GRANTED ){
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 
-           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
                     (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
                             != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission
                             (context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)) {
@@ -99,7 +99,8 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
                     (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
                             != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission
                             (context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                            && ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED)) {
+                            && ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED))
+            {
                 ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_BACKGROUND_LOCATION}, 2);
                 //startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS));
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
@@ -110,7 +111,7 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
 
 
                 //startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS));
-            }else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
                     == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission
                     (context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
                     & ActivityCompat.checkSelfPermission
@@ -127,24 +128,24 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
                     }
                 });
 
-        }else {
-               Log.d(TAG, "onCreate2: ");
+            } else {
+                Log.d(TAG, "onCreate2: ");
 
-               requestLocation.setOnClickListener(new View.OnClickListener() {
-                   @Override
-                   public void onClick(View v) {
-                       mService.requestLocationUpdate();
-                   }
-               });
+                requestLocation.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        mService.requestLocationUpdate();
+                    }
+                });
 
-               removeLocation.setOnClickListener(new View.OnClickListener() {
-                   @Override
-                   public void onClick(View v) {
-                       mService.removeLocationUpdate();
-                   }
-               });
+                removeLocation.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        mService.removeLocationUpdate();
+                    }
+                });
 
-           }
+            }
 
             setButtonState(Common.requestingLocationUpdate(MainActivity.this));
             bindService(new Intent(MainActivity.this,
@@ -242,9 +243,8 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
     public void onListenLocation(SendLocationToActivity event) {
 
-        if (event!=null)
-        {
-            String data=new StringBuilder()
+        if (event != null) {
+            String data = new StringBuilder()
                     .append(event.getLocation().getLatitude())
                     .append("/")
                     .append(event.getLocation().getLongitude())
@@ -271,9 +271,8 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[], @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == 1 || requestCode == 3 || requestCode==2) {
+        if (requestCode == 1 || requestCode == 3 || requestCode == 2) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED)
-                Toast.makeText(mService, "enterrrr", Toast.LENGTH_SHORT).show();
             requestLocation.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -293,15 +292,14 @@ public class MainActivity extends AppCompatActivity implements SharedPreferences
                             MyBackgroundService.class),
                     mServiceConnection,
                     Context.BIND_AUTO_CREATE);
-        }
-            else
-                new AlertDialog.Builder(context)
-                        .setTitle("عدم اجازه دسترسی")
-                        .setMessage("دوباره سعی کنید")
-                        .setPositiveButton("ورود به تنظیمات", (dialog, which) ->
-                                gotoPermissionSetting()).create().show();
-        }
+        } else
+            new AlertDialog.Builder(context)
+                    .setTitle("عدم اجازه دسترسی")
+                    .setMessage("دوباره سعی کنید")
+                    .setPositiveButton("ورود به تنظیمات", (dialog, which) ->
+                            gotoPermissionSetting()).create().show();
     }
+}
 
 
 

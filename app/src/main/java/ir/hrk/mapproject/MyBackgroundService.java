@@ -80,7 +80,7 @@ public class MyBackgroundService extends Service {
         };
 
         createLocationRequest();
-        grtLastLocation();
+        getLastLocation();
 
         HandlerThread handlerThread = new HandlerThread("EDMTDev");
         handlerThread.start();
@@ -159,7 +159,7 @@ public class MyBackgroundService extends Service {
         }
     }
 
-    private void grtLastLocation() {
+    private void getLastLocation() {
         try {
             fusedLocationProviderClient.getLastLocation()
                     .addOnCompleteListener(new OnCompleteListener<Location>() {
