@@ -1,115 +1,180 @@
 package ir.hrk.mapproject;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.IBinder;
+import android.preference.PreferenceManager;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
-import com.google.android.gms.maps.CameraUpdate;
+import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.karumi.dexter.Dexter;
+import com.karumi.dexter.MultiplePermissionsReport;
+import com.karumi.dexter.PermissionToken;
+import com.karumi.dexter.listener.PermissionRequest;
+import com.karumi.dexter.listener.multi.MultiplePermissionsListener;
 
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 import org.jetbrains.annotations.NotNull;
 
-public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, LocationListener {
+import java.util.Arrays;
+import java.util.List;
+
+public class MainActivity extends AppCompatActivity implements SharedPreferences.OnSharedPreferenceChangeListener {
 
 
-    LocationManager locationManager;
 
-    @RequiresApi(api = Build.VERSION_CODES.P)
+    Button requestLocation, removeLocation;
+    MyBackgroundService mService = null;
+    boolean mBound = false;
+
+    private final ServiceConnection mServiceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            MyBackgroundService.LocalBinder binder = (MyBackgroundService.LocalBinder) service;
+            mService = binder.getSrvice();
+            mBound = true;
+
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            mService = null;
+            mBound = false;
+
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        SupportMapFragment supportMapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map_fragment);
-        if (supportMapFragment != null) {
-            supportMapFragment.getMapAsync(this);
-        }
+        Dexter.withActivity(this)
+                .withPermissions(Arrays.asList(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                ))
+                .withListener(new MultiplePermissionsListener() {
 
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1001);
+                    @Override
+                    public void onPermissionsChecked(MultiplePermissionsReport multiplePermissionsReport) {
+                        removeLocation = findViewById(R.id.remove_location_updates_button);
+                        requestLocation = findViewById(R.id.request_location_updates_button);
+
+                        requestLocation.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                mService.requestLocationUpdate();
+                            }
+                        });
+
+                        removeLocation.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                               mService.removeLocationUpdate();
+                            }
+                        });
+
+                        setButtonState(Common.requestingLocationUpdate(MainActivity.this));
+                        bindService(new Intent(MainActivity.this,
+                                        MyBackgroundService.class),
+                                mServiceConnection,
+                                Context.BIND_AUTO_CREATE);
+
+                    }
+
+                    @Override
+                    public void onPermissionRationaleShouldBeShown(List<PermissionRequest> list, PermissionToken permissionToken) {
+
+                    }
+                }).check();
+
+
+    }
+
+
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        if (key.equals(Common.KEY_REQUEST_LOCATION_UPDATE)) {
+            setButtonState(sharedPreferences.getBoolean(Common.KEY_REQUEST_LOCATION_UPDATE, false));
+        }
+    }
+
+    private void setButtonState(boolean isRequestEnable) {
+        if (isRequestEnable) {
+            requestLocation.setEnabled(false);
+            removeLocation.setEnabled(true);
         } else {
-            startService(new Intent(this,LocationService.class));
+            requestLocation.setEnabled(true);
+            removeLocation.setEnabled(false);
         }
 
 
-       /* if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)){
-            Toast.makeText(this,"on",Toast.LENGTH_SHORT).show();
-        }else{
-            Toast.makeText(this,"off",Toast.LENGTH_SHORT).show();
-        }*/
-
-
-
-
     }
 
-    @SuppressLint("MissingPermission")
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull @NotNull String[] permissions, @NonNull @NotNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == 1001 &&
-                grantResults[0] == PackageManager.PERMISSION_GRANTED &&
-                grantResults[1] == PackageManager.PERMISSION_GRANTED){
-            startService(new Intent(this,LocationService.class));
+    protected void onStart() {
+        super.onStart();
+        PreferenceManager.getDefaultSharedPreferences(this)
+                .registerOnSharedPreferenceChangeListener(this::onSharedPreferenceChanged);
+        EventBus.getDefault().register(this);
+    }
+
+    @Override
+    protected void onStop() {
+        if (mBound) {
+            unbindService(mServiceConnection);
+            mBound = false;
+
         }
-    }
+        PreferenceManager.getDefaultSharedPreferences(this)
+                .unregisterOnSharedPreferenceChangeListener(this::onSharedPreferenceChanged);
+        EventBus.getDefault().unregister(this);
 
-    @Override
-    public void onMapReady(@NonNull @org.jetbrains.annotations.NotNull GoogleMap googleMap) {
-
-        LatLng myLocation = new LatLng(35.681156, 51.385098);
-        googleMap.addMarker(new MarkerOptions().position(myLocation).title("kamali")).setSnippet("roberooye bashgah farhangian");
-        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, 15.5f));
-        googleMap.getUiSettings().setZoomControlsEnabled(true);
-        googleMap.getUiSettings().setZoomGesturesEnabled(true);
-    }
-
-    @Override
-    public void onLocationChanged(@NonNull Location location) {
-        /*Toast.makeText(this, "lat : " + location.getLatitude() + "lag : " + location.getLongitude(), Toast.LENGTH_SHORT).show();*/
-        Log.i("loc",location.getLatitude()+"");
-    }
-
-    @Override
-    public void onFlushComplete(int requestCode) {
-        /*Toast.makeText(this,"flush : " + requestCode,Toast.LENGTH_SHORT).show();*/
-        Log.i("flush",requestCode+"");
-    }
-
-    @Override
-    public void onStatusChanged(String provider, int status, Bundle extras) {
-        Log.i("status",provider + " : " + status);
-    }
-
-    @Override
-    public void onProviderEnabled(@NonNull String provider) {
-        Log.i("provider_enable",provider );
+        super.onStop();
 
     }
 
-    @Override
-    public void onProviderDisabled(@NonNull String provider) {
-        Log.i("provider_disable",provider );
+    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
+    public void onListenLocation(SendLocationToActivity event) {
+
+        if (event!=null)
+        {
+            String data=new StringBuilder()
+                    .append(event.getLocation().getLatitude())
+                    .append("/")
+                    .append(event.getLocation().getLongitude())
+                    .toString();
+            Toast.makeText(mService, data, Toast.LENGTH_SHORT).show();
+        }
     }
 }
+
+
